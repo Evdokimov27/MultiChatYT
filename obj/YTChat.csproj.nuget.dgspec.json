@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\mrevd\\source\\repos\\YTChat\\YTChat.csproj": {}
+    "C:\\Users\\mrevd\\OneDrive\\Документы\\GitHub\\MultiChatYT\\YTChat.csproj": {}
   },
   "projects": {
-    "C:\\Users\\mrevd\\source\\repos\\YTChat\\YTChat.csproj": {
+    "C:\\Users\\mrevd\\OneDrive\\Документы\\GitHub\\MultiChatYT\\YTChat.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\mrevd\\source\\repos\\YTChat\\YTChat.csproj",
+        "projectUniqueName": "C:\\Users\\mrevd\\OneDrive\\Документы\\GitHub\\MultiChatYT\\YTChat.csproj",
         "projectName": "YTChat",
-        "projectPath": "C:\\Users\\mrevd\\source\\repos\\YTChat\\YTChat.csproj",
+        "projectPath": "C:\\Users\\mrevd\\OneDrive\\Документы\\GitHub\\MultiChatYT\\YTChat.csproj",
         "packagesPath": "C:\\Users\\mrevd\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\mrevd\\source\\repos\\YTChat\\obj\\",
+        "outputPath": "C:\\Users\\mrevd\\OneDrive\\Документы\\GitHub\\MultiChatYT\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

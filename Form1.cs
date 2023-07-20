@@ -2,6 +2,7 @@ using Google.Apis.Auth.OAuth2;
 using Google.Apis.Auth.OAuth2.Flows;
 using Google.Apis.Auth.OAuth2.Responses;
 using Google.Apis.Services;
+using Google.Apis.Util;
 using Google.Apis.Util.Store;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
@@ -11,9 +12,11 @@ using System;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Reflection;
 using System.Security.AccessControl;
 using System.Text;
 using YTChat;
+using static YTChat.Form1;
 
 namespace YTChat
 {
@@ -25,6 +28,7 @@ namespace YTChat
 			public int Index { get; set; }
 			public string Name { get; set; }
 			public string AccessToken { get; set; }
+			public string ResponsePath { get; set; }
 		}
 
 		static string jsonFilePath = "token/access_token.json";
@@ -35,6 +39,11 @@ namespace YTChat
 
 		private void Form1_Load(object sender, EventArgs e)
 		{
+			LoadJSON();
+		}
+		private void LoadJSON()
+		{
+			Accounts.Items.Clear();
 			List<Tokens> tokensList;
 			string jsonContent = File.ReadAllText(jsonFilePath);
 			tokensList = JsonConvert.DeserializeObject<List<Tokens>>(jsonContent);
@@ -44,14 +53,13 @@ namespace YTChat
 			}
 		}
 
-		public void GetYouTubeChannelToken()
+		public void GetYouTubeChannelToken(int index)
 		{
 			// Путь к файлу с клиентскими учетными данными
-			string credentialsPath = "YT.json";
+			string credentialsPath = "token.json";
+			string responsesPath = "token/"+index;
 			// Запрос разрешений на доступ к YouTube Data API
 			string[] scopes = { "https://www.googleapis.com/auth/youtube.force-ssl", "https://www.googleapis.com/auth/youtube" };
-			// Используем NullDataStore вместо FileDataStore
-			IDataStore nullDataStore = new NullDataStore();
 			// Загрузка клиентских учетных данных из файла
 			UserCredential credential;
 			using (var stream = new FileStream(credentialsPath, FileMode.Open, FileAccess.Read))
@@ -61,7 +69,7 @@ namespace YTChat
 					scopes,
 					"user",
 					CancellationToken.None,
-					nullDataStore).Result;
+					new FileDataStore(responsesPath, true)).Result;
 				stream.Dispose();
 			}
 			var youtubeService = new YouTubeService(new BaseClientService.Initializer
@@ -75,7 +83,9 @@ namespace YTChat
 			string channelName = channelsListResponse.Items[0].Snippet.Title;
 
 			string accessToken = credential.Token.AccessToken;
-			SaveJSON(channelName, accessToken);
+			string path = responsesPath;
+			SaveJSON(channelName, accessToken, path);
+			LoadJSON();
 		}
 
 		public static string ChatID(string apiKey, string videoId)
@@ -99,8 +109,8 @@ namespace YTChat
 
 			return liveChatId;
 		}
-
-		static void SaveJSON(string nameToken, string accessToken)
+		
+		static void SaveJSON(string nameToken, string accessToken, string path)
 		{
 			// Загружаем существующий JSON-файл и десериализуем его в список объектов Tokens
 			List<Tokens> tokensList;
@@ -123,26 +133,14 @@ namespace YTChat
 			{
 				Index = tokensList.Count, // Генерируем новый индекс (предполагаем, что индексы начинаются с 0)
 				Name = nameToken, // Замените на нужное имя
-				AccessToken = accessToken // Замените на нужный access token
+				AccessToken = accessToken, // Замените на нужный access token
+				ResponsePath = path// Замените на нужный refresh token
 			});
 			// Преобразуем список в JSON-формат
 			string jsonTokens = JsonConvert.SerializeObject(tokensList, Formatting.Indented);
 
 			// Записываем JSON-строку в файл
 			File.WriteAllText(jsonFilePath, jsonTokens);
-		}
-
-		static List<Tokens> LoadTokensListFromFile(string filePath)
-		{
-			// Если файл не существует, вернем пустой список
-			if (!File.Exists(filePath))
-				return new List<Tokens>();
-
-			// Загружаем JSON-файл и десериализуем его в список объектов Tokens
-			string jsonContent = File.ReadAllText(filePath);
-			List<Tokens> tokensList = JsonConvert.DeserializeObject<List<Tokens>>(jsonContent);
-
-			return tokensList;
 		}
 
 		public void SendMessage(string token)
@@ -182,20 +180,105 @@ namespace YTChat
 				MessageBox.Show("An error occurred: " + ex.Message);
 			}
 		}
+		public UserCredential GetUpdatedUserCredential(string[] tokensPath)
+		{
+			string credentialsPath = "token.json";
+			UserCredential userCredential;
+			using (var stream = new FileStream(credentialsPath, FileMode.Open, FileAccess.Read))
+			{
+				// Загрузите учетные данные OAuth 2.0 из JSON-файла
+				var clientSecrets = GoogleClientSecrets.Load(stream).Secrets;
+
+				// Создайте объект TokenResponse из файла с данными пользователя (TokenResponse-user)
+				var tokenResponseJson = File.ReadAllText(tokensPath[0]);
+				var tokenResponse = Newtonsoft.Json.JsonConvert.DeserializeObject<TokenResponse>(tokenResponseJson);
+
+				// Создайте объект UserCredential на основе учетных данных и TokenResponse
+				userCredential = new UserCredential(new GoogleAuthorizationCodeFlow(
+			   new GoogleAuthorizationCodeFlow.Initializer
+			   {
+				   DataStore = new FileDataStore("YouTubeAPI", false),
+				   ClientSecrets = clientSecrets
+			   }),
+			   "user",
+			   tokenResponse);
+
+
+				// Попробуйте обновить Access Token с использованием Refresh Token
+				userCredential.RefreshTokenAsync(CancellationToken.None);
+
+
+
+
+
+				// Сохранение обновленных данных пользователя в файл (если необходимо)
+				// Это дополнительный шаг, если вы хотите обновить данные в файле TokenResponse-user
+				//var updatedTokenResponseJson = JsonConvert.SerializeObject(userCredential.Token);
+				//File.WriteAllText(tokensPath[0], updatedTokenResponseJson
+			}
+			return userCredential;
+
+		}
+		
 		private void button3_Click(object sender, EventArgs e)
 		{
-			GetYouTubeChannelToken();
+			GetYouTubeChannelToken(Accounts.Items.Count);
 		}
 
-		private void button2_Click(object sender, EventArgs e)
+		private async void button2_Click(object sender, EventArgs e)
 		{
-			List<Tokens> tokensList;
-			string jsonContent = File.ReadAllText(jsonFilePath);
-			tokensList = JsonConvert.DeserializeObject<List<Tokens>>(jsonContent);
-			string accessTokenAccount = tokensList[Accounts.SelectedIndex].AccessToken;
+			await GetUpdatedAccessToken(Accounts.SelectedIndex);
 
-			SendMessage(accessTokenAccount);
+			var token = GetUpdatedUserCredential(Directory.GetFiles("token/" + Accounts.SelectedIndex + "/", "*.TokenResponse-user")).Token.AccessToken;
+			if (videoIdText.Text.Length > 0)
+			{
+				SendMessage(token);
+			}
 		}
+		public static async Task<UserCredential> GetUserCredential(int index)
+		{
+			
+			using (var stream = new FileStream("token.json", FileMode.Open, FileAccess.Read))
+			{
+				var clientSecrets = GoogleClientSecrets.Load(stream).Secrets;
+				string[] files = Directory.GetFiles("token/" + index + "/", "*.TokenResponse-user");
+				string tokensPath = files[0];
+				
+				var tokenResponseJson = File.ReadAllText(tokensPath);
+				var tokenResponse = Newtonsoft.Json.JsonConvert.DeserializeObject<TokenResponse>(tokenResponseJson);
+
+				var userCredential = new UserCredential(new GoogleAuthorizationCodeFlow(
+					new GoogleAuthorizationCodeFlow.Initializer
+					{
+						DataStore = new FileDataStore("YouTubeAPI", false),
+						ClientSecrets = clientSecrets
+					}),
+					"user",
+					tokenResponse);
+
+				// Проверьте, истек ли Access Token
+				if (userCredential.Token.IsExpired(SystemClock.Default))
+				{
+					// Попробуйте обновить Access Token с использованием Refresh Token
+					bool success = await userCredential.RefreshTokenAsync(CancellationToken.None);
+					if (!success)
+					{
+						throw new Exception("Failed to refresh the token.");
+					}
+
+					var updatedTokenResponseJson = Newtonsoft.Json.JsonConvert.SerializeObject(userCredential.Token);
+					File.WriteAllText(tokensPath, updatedTokenResponseJson);
+				}
+
+				return userCredential;
+			}
+		}
+
+		public static async Task<string> GetUpdatedAccessToken(int index)
+		{
+			UserCredential credential = await GetUserCredential(index);
+			return credential.Token.AccessToken;
+		}	
 
 		private void button1_Click(object sender, EventArgs e)
 		{
