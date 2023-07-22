@@ -38,13 +38,14 @@
 			NameStreamText = new Label();
 			button3 = new Button();
 			textBox1 = new TextBox();
+			button4 = new Button();
 			SuspendLayout();
 			// 
 			// videoIdText
 			// 
 			videoIdText.Location = new Point(12, 39);
 			videoIdText.Name = "videoIdText";
-			videoIdText.Size = new Size(151, 23);
+			videoIdText.Size = new Size(99, 23);
 			videoIdText.TabIndex = 0;
 			// 
 			// label1
@@ -58,11 +59,11 @@
 			// 
 			// button1
 			// 
-			button1.Location = new Point(179, 38);
+			button1.Location = new Point(117, 38);
 			button1.Name = "button1";
-			button1.Size = new Size(88, 23);
+			button1.Size = new Size(60, 23);
 			button1.TabIndex = 4;
-			button1.Text = "Подключить";
+			button1.Text = "LIKE";
 			button1.UseVisualStyleBackColor = true;
 			button1.Click += button1_Click;
 			// 
@@ -130,11 +131,22 @@
 			textBox1.Size = new Size(251, 61);
 			textBox1.TabIndex = 11;
 			// 
+			// button4
+			// 
+			button4.Location = new Point(183, 38);
+			button4.Name = "button4";
+			button4.Size = new Size(81, 23);
+			button4.TabIndex = 12;
+			button4.Text = "Просмотры";
+			button4.UseVisualStyleBackColor = true;
+			button4.Click += button4_Click;
+			// 
 			// Form1
 			// 
 			AutoScaleDimensions = new SizeF(7F, 15F);
 			AutoScaleMode = AutoScaleMode.Font;
 			ClientSize = new Size(276, 450);
+			Controls.Add(button4);
 			Controls.Add(textBox1);
 			Controls.Add(button3);
 			Controls.Add(NameStreamText);
@@ -168,5 +180,6 @@
 		private Label NameStreamText;
 		private Button button3;
 		private TextBox textBox1;
+		private Button button4;
 	}
 }

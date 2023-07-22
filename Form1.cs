@@ -9,6 +9,7 @@ using Google.Apis.YouTube.v3.Data;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.IO;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -57,7 +58,7 @@ namespace YTChat
 		{
 			// Путь к файлу с клиентскими учетными данными
 			string credentialsPath = "token.json";
-			string responsesPath = "token/"+index;
+			string responsesPath = "token/" + index;
 			// Запрос разрешений на доступ к YouTube Data API
 			string[] scopes = { "https://www.googleapis.com/auth/youtube.force-ssl", "https://www.googleapis.com/auth/youtube" };
 			// Загрузка клиентских учетных данных из файла
@@ -109,7 +110,7 @@ namespace YTChat
 
 			return liveChatId;
 		}
-		
+
 		static void SaveJSON(string nameToken, string accessToken, string path)
 		{
 			// Загружаем существующий JSON-файл и десериализуем его в список объектов Tokens
@@ -219,7 +220,7 @@ namespace YTChat
 			return userCredential;
 
 		}
-		
+
 		private void button3_Click(object sender, EventArgs e)
 		{
 			GetYouTubeChannelToken(Accounts.Items.Count);
@@ -237,13 +238,13 @@ namespace YTChat
 		}
 		public static async Task<UserCredential> GetUserCredential(int index)
 		{
-			
+
 			using (var stream = new FileStream("token.json", FileMode.Open, FileAccess.Read))
 			{
 				var clientSecrets = GoogleClientSecrets.Load(stream).Secrets;
 				string[] files = Directory.GetFiles("token/" + index + "/", "*.TokenResponse-user");
 				string tokensPath = files[0];
-				
+
 				var tokenResponseJson = File.ReadAllText(tokensPath);
 				var tokenResponse = Newtonsoft.Json.JsonConvert.DeserializeObject<TokenResponse>(tokenResponseJson);
 
@@ -273,16 +274,54 @@ namespace YTChat
 				return userCredential;
 			}
 		}
+		static void RateVideo(YouTubeService service, string videoId)
+		{
+			var rateRequest = service.Videos.Rate(videoId, VideosResource.RateRequest.RatingEnum.Like);
+			rateRequest.Execute();
+			System.Threading.Thread.Sleep(1000);
+		}
+		
 
-		public static async Task<string> GetUpdatedAccessToken(int index)
+		public static async Task<bool> IsStreamActiveAsync(YouTubeService youtubeService, string videoId)
+		{
+			// Получите информацию о видео (стриме) по его ID
+			var videosListRequest = youtubeService.Videos.List("liveStreamingDetails");
+			videosListRequest.Id = videoId;
+			var videosListResponse = await videosListRequest.ExecuteAsync();
+
+			// Проверьте, является ли видео (стрим) активным
+			return videosListResponse.Items[0].LiveStreamingDetails?.ActualEndTime == null;
+		}
+		public static void DisplayStreamStatus(string statusMessage)
+		{
+			Console.WriteLine(statusMessage);
+		}
+		
+
+			public static async Task<string> GetUpdatedAccessToken(int index)
 		{
 			UserCredential credential = await GetUserCredential(index);
 			return credential.Token.AccessToken;
-		}	
+		}
 
-		private void button1_Click(object sender, EventArgs e)
+		private async void button1_Click(object sender, EventArgs e)
 		{
+			UserCredential credential = GetUpdatedUserCredential(Directory.GetFiles("token/" + Accounts.SelectedIndex + "/", "*.TokenResponse-user"));
+			var youtubeService = new YouTubeService(new BaseClientService.Initializer
+			{
+				HttpClientInitializer = credential
+			});
+			RateVideo(youtubeService, videoIdText.Text); 
+		}
 
+		private async void button4_Click(object sender, EventArgs e)
+		{
+			List<UserCredential> credentials = new List<UserCredential>();
+
+			for (int i=0; i < Accounts.Items.Count; i++) {
+				credentials.Add(GetUpdatedUserCredential(Directory.GetFiles("token/" + i + "/", "*.TokenResponse-user")));
+			}
+			
 		}
 	}
 }
